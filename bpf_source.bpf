@@ -1,0 +1,3 @@
+loadx R0 #100
+loadi #123
+ret 0
