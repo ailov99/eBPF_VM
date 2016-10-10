@@ -127,6 +127,7 @@ uint16_t seekLabel(std::string& label)
   return 0;
 }
 
+// Parses a 3-operand branching instruction
 uint64_t parseBranch(std::string& op, std::string& op1, std::string& op2, std::string& op3)
 {
   uint64_t instr = 0x0;
@@ -166,6 +167,14 @@ uint64_t parseBranch(std::string& op, std::string& op1, std::string& op2, std::s
   instr &= (seekLabel(op3, filename) << SHL_OFF); // offset   
 
   return instr;
+}
+
+// Parses a 3-operand packet access instruction.
+// This is used for the BPF_IND and BPF_ABS families of instructions.
+// Check kernel docs for more information.
+uint64_t parsePktAccess(std::string& op, std::string& op1, std::string& op2, std::string& op3)
+{
+  
 }
 
 // Parses source file and assembles all instructions into 
@@ -271,9 +280,19 @@ std::vector<uint64_t> assemble()
     }
     else if (op == "lddw")
     {
+      instream >> op1;
       instr &= BPF_LDDW;
       unsigned imm_value = strtoul(op1.substr(1).c_str(), NULL, 16);
       instr &= (imm_value << SHL_IMM);
+    }
+    else if (op == "ldabsw" || op == "ldabsh" || op == "ldabsb" || op == "ldabsdw"
+            || op == "ldindw" || op == "ldindh" || op == "ldindb" || op == "ldinddw")
+    {
+      instream >> op1;
+      instream >> op2;
+      std::string op3;
+      instream >> op3;
+      instr = parsePktAccess(op, op1, op2, op3);
     }
     else
     {
