@@ -19,12 +19,14 @@
 #define SHL_OFF 16
 #define SHL_IMM 32
 
+std::string filename;
+
 // Use the supplied opcode and 2 operands to construct the bytecode
 // for a whole ALU instruction.
 // This works for both 32 and 64 bit instructions.
 uint64_t parseALU(std::string& op, std::string& op1, std::string& op2)
 {
-  uint64_t instr;
+  uint64_t instr = 0x0;
   
   // SRC format
   if (op2[0] == 'r')
@@ -55,8 +57,8 @@ uint64_t parseALU(std::string& op, std::string& op1, std::string& op2)
             : (op == "mov32") ? BPF_MOV32_SRC
             : BPF_ARSH32_SRC;
             
-    instr &= ((op1[1] - '0') << SHL_DST);  // reg
-    instr &= ((op2[1] - '0') << SHL_SRC);  // reg
+    instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
+    instr &= ((op2[1] - '0') << SHL_SRC);  // src reg
   }
   // IMM format
   else
@@ -87,7 +89,7 @@ uint64_t parseALU(std::string& op, std::string& op1, std::string& op2)
             : (op == "mov32") ? BPF_MOV32_IMM
             : BPF_ARSH32_IMM;
     
-    instr &= ((op1[1] - '0') << SHL_DST);  // reg
+    instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
     
     unsigned imm_value = strtoul(op2.substr(1).c_str(), NULL, 16);
     instr &= (imm_value << SHL_IMM);  // imm
@@ -100,7 +102,7 @@ uint64_t parseALU(std::string& op, std::string& op1, std::string& op2)
 // supplied label.
 // This is used for branching instructions that use labels.
 // TODO: consider a table to cache these for programs with lots of jumps
-uint16_t seekLabel(std::string& label, std::string& filename)
+uint16_t seekLabel(std::string& label)
 {
   std::ifstream file(filename);
   if (file == nullptr)
@@ -125,9 +127,50 @@ uint16_t seekLabel(std::string& label, std::string& filename)
   return 0;
 }
 
+uint64_t parseBranch(std::string& op, std::string& op1, std::string& op2, std::string& op3)
+{
+  uint64_t instr = 0x0;
+  
+  // SRC format
+  if (op[2] == 'r')
+  {
+    instr &=
+            (op == "jeq")   ? BPF_JEQ_SRC
+            : (op == "jgt") ? BPF_JGT_SRC
+            : (op == "jge") ? BPF_JGE_SRC
+            : (op == "jset")? BPF_JSET_SRC
+            : (op == "jne") ? BPF_JNE_SRC
+            : (op == "jsgt")? BPF_JSGT_SRC
+            : BPF_JSGE_SRC;
+    
+    
+    instr &= ((op2[1] - '0') << SHL_SRC);  // src reg
+  }
+  // IMM format
+  else
+  {
+    instr &=
+            (op == "jeq")   ? BPF_JEQ_IMM
+            : (op == "jgt") ? BPF_JGT_IMM
+            : (op == "jge") ? BPF_JGE_IMM
+            : (op == "jset")? BPF_JSET_IMM
+            : (op == "jne") ? BPF_JNE_IMM
+            : (op == "jsgt")? BPF_JSGT_IMM
+            : BPF_JSGE_IMM;
+    
+    unsigned imm_value = strtoul(op2.substr(1).c_str(), NULL, 16);
+    instr &= (imm_value << SHL_IMM);  // imm  
+  }
+  
+  instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
+  instr &= (seekLabel(op3, filename) << SHL_OFF); // offset   
+
+  return instr;
+}
+
 // Parses source file and assembles all instructions into 
 // bytecode.
-std::vector<uint64_t> assemble(std::string& filename)
+std::vector<uint64_t> assemble()
 {
   std::vector<uint64_t> prog;
   
@@ -198,12 +241,22 @@ std::vector<uint64_t> assemble(std::string& filename)
       unsigned lbl_line = seekLabel(op1, filename);
       instr &= (lbl_line << SHL_OFF);
     }
+    else if (op == "jeq" || op == "jgt" || op == "jge" || op == "jset"
+            || op == "jne" || op == "jsgt" || op == "jsge")
+    {
+      instream >> op1;
+      instream >> op2;
+      // we need an extra operand for the label
+      std::string op3;
+      instream >> op3;
+      instr = parseBranch(op, op1, op2, op3);
+    }
     else if (op == "call")
     {
       instream >> op1;
       instr &= BPF_CALL_IMM;
-      unsigned lbl_line = strtoul(op1.substr(1).c_str(), NULL, 16);
-      instr &= (lbl_line << SHL_IMM);
+      unsigned imm_value = strtoul(op1.substr(1).c_str(), NULL, 16);
+      instr &= (imm_value << SHL_IMM);
     }
     else if (op == "exit")
     {
@@ -215,6 +268,18 @@ std::vector<uint64_t> assemble(std::string& filename)
       // discard it
       // Note: labels are only relevant to branching
       continue;
+    }
+    else if (op == "lddw")
+    {
+      instr &= BPF_LDDW;
+      unsigned imm_value = strtoul(op1.substr(1).c_str(), NULL, 16);
+      instr &= (imm_value << SHL_IMM);
+    }
+    else
+    {
+      std::cout << "Bad instruction: " << op 
+              << ". Exiting parse routine..." << std::endl;
+      return;
     }
     
     
@@ -229,8 +294,8 @@ int main(int argc, char** argv)
 {
   //std::unique_ptr<VM> vm = std::make_unique<VM>();
   
-  std::string filename("bpf_source.bpf");
-  std::vector<uint64_t> prog = assemble(filename);
+  filename("bpf_source.bpf");
+  std::vector<uint64_t> prog = assemble();
   
   // feed assembled bytecode to the VM
   //std::vector<uint16_t> program;
