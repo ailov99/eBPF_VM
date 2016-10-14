@@ -24,6 +24,10 @@ std::string filename;
 // Use the supplied opcode and 2 operands to construct the bytecode
 // for a whole ALU instruction.
 // This works for both 32 and 64 bit instructions.
+//
+// op  - opcode
+// op1 - dst (reg)
+// op2 - src (reg OR imm)
 uint64_t parseALU(std::string& op, std::string& op1, std::string& op2)
 {
   uint64_t instr = 0x0;
@@ -128,6 +132,11 @@ uint16_t seekLabel(std::string& label)
 }
 
 // Parses a 3-operand branching instruction
+//
+// op  - opcode
+// op1 - dst (reg)
+// op2 - src (reg OR imm)
+// op3 - offset
 uint64_t parseBranch(std::string& op, std::string& op1, std::string& op2, std::string& op3)
 {
   uint64_t instr = 0x0;
@@ -172,9 +181,101 @@ uint64_t parseBranch(std::string& op, std::string& op1, std::string& op2, std::s
 // Parses a 3-operand packet access instruction.
 // This is used for the BPF_IND and BPF_ABS families of instructions.
 // Check kernel docs for more information.
+//
+// op  - opcode
+// op1 - src (reg)
+// op2 - dst (reg)
+// op3 - imm
 uint64_t parsePktAccess(std::string& op, std::string& op1, std::string& op2, std::string& op3)
 {
+  uint64_t instr = 0x0;
   
+  instr &= 
+          (op == "ldabsw") ? BPF_LDABSW
+          : (op == "ldabsh") ? BPF_LDABSH
+          : (op == "ldabsb") ? BPF_LDABSB
+          : (op == "ldabsdw") ? BPF_LDABSDW
+          : (op == "ldindw") ? BPF_LDINDW
+          : (op == "ldindh") ? BPF_LDINDH
+          : (op == "ldindb") ? BPF_LDINDB
+          : BPF_LDINDDW;
+  
+  instr &= ((op1[1] - '0') << SHL_SRC);  // src reg
+  instr &= ((op2[1] - '0') << SHL_DST);  // dst reg
+  unsigned imm_value = strtoul(op3.substr(1).c_str(), NULL, 16);
+  instr &= (imm_value << SHL_IMM);  // imm  
+  
+  return instr;
+}
+
+// Parses a 3-operand LDX instruction
+//
+// op  - opcode
+// op1 - dst (reg)
+// op2 - src (reg)
+// op3 - offset
+uint64_t parseLdx(std::string& op, std::string& op1, std::string& op2, std::string& op3)
+{
+  uint64_t instr = 0x0;
+  instr &=
+          (op == "ldxw") ? BPF_LDXW
+          : (op == "ldxh") ? BPF_LDXH
+          : (op == "ldxb") ? BPF_LDXB
+          : BPF_LDXDW;
+  
+  instr &= ((op2[1] - '0') << SHL_SRC);  // src reg
+  instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
+  unsigned offset_value = strtoul(op3.substr(1).c_str(), NULL, 16);
+  instr &= (offset_value << SHL_OFF);  // offset 
+  
+  return instr;
+}
+
+// Parses 3-operand store immediate value
+//
+// op  - opcode
+// op1 - dst (reg)
+// op2 - offset
+// op3 - imm
+uint64_t parseStImm(std::string op, std::string op1, std::string op2, std::string op3)
+{
+  uint64_t instr = 0x0;
+  instr &=
+          (op == "stw") ? BPF_STW
+          : (op == "sth") ? BPF_STH
+          : (op == "stb") ? BPF_STB
+          : BPF_STDW;
+  
+  instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
+  unsigned offset_value = strtoul(op2.substr(1).c_str(), NULL, 16);
+  instr &= (offset_value << SHL_OFF);  // offset 
+  unsigned imm_value = strtoul(op3.substr(1).c_str(), NULL, 16);
+  instr &= (imm_value << SHL_IMM);  // imm  
+  
+  return instr;
+}
+
+// Parses a 3-operand store reg value
+//
+// op  - opcode
+// op1 - dst (reg)
+// op2 - offset
+// op3 - src (reg)
+uint64_t parseStSrc(std::string op, std::string op1, std::string op2, std::string op3)
+{
+  uint64_t instr = 0x0;
+  instr &=
+          (op == "stxw") ? BPF_STXW
+          : (op == "stxdw") ? BPF_STXDW
+          : (op == "stxb") ? BPF_STXB
+          : BPF_STXH;
+  
+  instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
+  unsigned offset_value = strtoul(op2.substr(1).c_str(), NULL, 16);
+  instr &= (offset_value << SHL_OFF);  // offset 
+  instr &= ((op3[1] - '0') << SHL_SRC);  // src reg
+  
+  return instr;
 }
 
 // Parses source file and assembles all instructions into 
@@ -293,6 +394,30 @@ std::vector<uint64_t> assemble()
       std::string op3;
       instream >> op3;
       instr = parsePktAccess(op, op1, op2, op3);
+    }
+    else if (op == "ldxw" || op == "ldxh" || op == "ldxb" || op == "ldxdw")
+    {
+      instream >> op1;
+      instream >> op2; // ignore [
+      std::string op3;
+      instream >> op3; // ignore + and ]
+      instr = parseLdx(op, op1, op2, op3);
+    }
+    else if (op == "stw" || op == "sth" || op == "stb" || op == "stdw")
+    {
+      instream >> op1;
+      instream >> op2;
+      std::string op3;
+      instream >> op3;
+      instr = parseStImm(op, op1, op2, op3);
+    }
+    else if (op == "stxw" || op == "stxh" || op =="stxb" || op == "stxdw")
+    {
+      instream >> op1;
+      instream >> op2;
+      std::string op3;
+      instream >> op3;
+      instr = parseStSrc(op, op1, op2, op3);
     }
     else
     {
