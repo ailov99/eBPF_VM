@@ -14,12 +14,14 @@
 #include "Opcodes.h"
 
 // Shift values
-#define SHL_DST 8
-#define SHL_SRC 12
-#define SHL_OFF 16
-#define SHL_IMM 32
+#define SHL_DST 8UL
+#define SHL_SRC 12UL
+#define SHL_OFF 16UL
+#define SHL_IMM 32UL
 
+// Useful globals
 std::string filename;
+uint16_t curr_line;
 
 // Use the supplied opcode and 2 operands to construct the bytecode
 // for a whole ALU instruction.
@@ -33,9 +35,9 @@ uint64_t parseALU(std::string& op, std::string& op1, std::string& op2)
   uint64_t instr = 0x0;
   
   // SRC format
-  if (op2[0] == 'r')
+  if (op2[0] == 'r' || op2[0] == 'R')
   {
-    instr &= 
+    instr |= 
             (op == "add")   ? BPF_ADD_SRC
             : (op == "sub") ? BPF_SUB_SRC
             : (op == "mul") ? BPF_MUL_SRC
@@ -61,13 +63,13 @@ uint64_t parseALU(std::string& op, std::string& op1, std::string& op2)
             : (op == "mov32") ? BPF_MOV32_SRC
             : BPF_ARSH32_SRC;
             
-    instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
-    instr &= ((op2[1] - '0') << SHL_SRC);  // src reg
+    instr |= ((op1[1] - '0') << SHL_DST);  // dst reg
+    instr |= ((op2[1] - '0') << SHL_SRC);  // src reg
   }
   // IMM format
   else
   {
-    instr &= 
+    instr |= 
             (op == "add")   ? BPF_ADD_IMM
             : (op == "sub") ? BPF_SUB_IMM
             : (op == "mul") ? BPF_MUL_IMM
@@ -93,10 +95,10 @@ uint64_t parseALU(std::string& op, std::string& op1, std::string& op2)
             : (op == "mov32") ? BPF_MOV32_IMM
             : BPF_ARSH32_IMM;
     
-    instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
+    instr |= ((op1[1] - '0') << SHL_DST);  // dst reg
     
-    unsigned imm_value = strtoul(op2.substr(1).c_str(), NULL, 16);
-    instr &= (imm_value << SHL_IMM);  // imm
+    uint64_t imm_value = strtoul(op2.substr(1).c_str(), NULL, 16);
+    instr |= (imm_value << SHL_IMM);  // imm
   }
   
   return instr;
@@ -104,27 +106,35 @@ uint64_t parseALU(std::string& op, std::string& op1, std::string& op2)
 
 // Parses entire source file looking for the line number of the
 // supplied label.
+// Returns the offset required for the PC to move to the label.
 // This is used for branching instructions that use labels.
 // TODO: consider a table to cache these for programs with lots of jumps
+//
+// label - label we are looking for
 uint16_t seekLabel(std::string& label)
 {
   std::ifstream file(filename);
-  if (file == nullptr)
+  if (!file)
   {
     return 0;
   }
   
-  std::string str;
+  std::string line;
   uint16_t line_num = 0;
   
-  while (std::getline(file, str))
+  while (std::getline(file, line))
   {
     line_num++;
+    if (line_num <= curr_line)
+    {
+      // Skip all lines prior to the one the call is coming from
+      continue;
+    }
     
-    if (str.find(label) != std::string::npos)
+    if (line == (label + ":"))
     {
       // label found
-      return line_num;
+      return (line_num - curr_line);
     }
   }
 
@@ -142,9 +152,9 @@ uint64_t parseBranch(std::string& op, std::string& op1, std::string& op2, std::s
   uint64_t instr = 0x0;
   
   // SRC format
-  if (op[2] == 'r')
+  if (op2[0] == 'r' || op2[0] == 'R')
   {
-    instr &=
+    instr |=
             (op == "jeq")   ? BPF_JEQ_SRC
             : (op == "jgt") ? BPF_JGT_SRC
             : (op == "jge") ? BPF_JGE_SRC
@@ -154,12 +164,12 @@ uint64_t parseBranch(std::string& op, std::string& op1, std::string& op2, std::s
             : BPF_JSGE_SRC;
     
     
-    instr &= ((op2[1] - '0') << SHL_SRC);  // src reg
+    instr |= ((op2[1] - '0') << SHL_SRC);  // src reg
   }
   // IMM format
   else
   {
-    instr &=
+    instr |=
             (op == "jeq")   ? BPF_JEQ_IMM
             : (op == "jgt") ? BPF_JGT_IMM
             : (op == "jge") ? BPF_JGE_IMM
@@ -168,12 +178,12 @@ uint64_t parseBranch(std::string& op, std::string& op1, std::string& op2, std::s
             : (op == "jsgt")? BPF_JSGT_IMM
             : BPF_JSGE_IMM;
     
-    unsigned imm_value = strtoul(op2.substr(1).c_str(), NULL, 16);
-    instr &= (imm_value << SHL_IMM);  // imm  
+    uint64_t imm_value = strtoul(op2.substr(1).c_str(), NULL, 16);
+    instr |= (imm_value << SHL_IMM);  // imm  
   }
   
-  instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
-  instr &= (seekLabel(op3, filename) << SHL_OFF); // offset   
+  instr |= ((op1[1] - '0') << SHL_DST);  // dst reg
+  instr |= (seekLabel(op3) << SHL_OFF); // offset   
 
   return instr;
 }
@@ -190,7 +200,7 @@ uint64_t parsePktAccess(std::string& op, std::string& op1, std::string& op2, std
 {
   uint64_t instr = 0x0;
   
-  instr &= 
+  instr |= 
           (op == "ldabsw") ? BPF_LDABSW
           : (op == "ldabsh") ? BPF_LDABSH
           : (op == "ldabsb") ? BPF_LDABSB
@@ -200,10 +210,10 @@ uint64_t parsePktAccess(std::string& op, std::string& op1, std::string& op2, std
           : (op == "ldindb") ? BPF_LDINDB
           : BPF_LDINDDW;
   
-  instr &= ((op1[1] - '0') << SHL_SRC);  // src reg
-  instr &= ((op2[1] - '0') << SHL_DST);  // dst reg
-  unsigned imm_value = strtoul(op3.substr(1).c_str(), NULL, 16);
-  instr &= (imm_value << SHL_IMM);  // imm  
+  instr |= ((op1[1] - '0') << SHL_SRC);  // src reg
+  instr |= ((op2[1] - '0') << SHL_DST);  // dst reg
+  uint64_t imm_value = strtoul(op3.substr(1).c_str(), NULL, 16);
+  instr |= (imm_value << SHL_IMM);  // imm  
   
   return instr;
 }
@@ -217,16 +227,16 @@ uint64_t parsePktAccess(std::string& op, std::string& op1, std::string& op2, std
 uint64_t parseLdx(std::string& op, std::string& op1, std::string& op2, std::string& op3)
 {
   uint64_t instr = 0x0;
-  instr &=
+  instr |=
           (op == "ldxw") ? BPF_LDXW
           : (op == "ldxh") ? BPF_LDXH
           : (op == "ldxb") ? BPF_LDXB
           : BPF_LDXDW;
   
-  instr &= ((op2[1] - '0') << SHL_SRC);  // src reg
-  instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
-  unsigned offset_value = strtoul(op3.substr(1).c_str(), NULL, 16);
-  instr &= (offset_value << SHL_OFF);  // offset 
+  instr |= ((op2[2] - '0') << SHL_SRC);  // src reg
+  instr |= ((op1[1] - '0') << SHL_DST);  // dst reg
+  uint64_t offset_value = strtoul(op3.substr(1).c_str(), NULL, 16);
+  instr |= (offset_value << SHL_OFF);  // offset 
   
   return instr;
 }
@@ -240,17 +250,17 @@ uint64_t parseLdx(std::string& op, std::string& op1, std::string& op2, std::stri
 uint64_t parseStImm(std::string op, std::string op1, std::string op2, std::string op3)
 {
   uint64_t instr = 0x0;
-  instr &=
+  instr |=
           (op == "stw") ? BPF_STW
           : (op == "sth") ? BPF_STH
           : (op == "stb") ? BPF_STB
           : BPF_STDW;
   
-  instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
-  unsigned offset_value = strtoul(op2.substr(1).c_str(), NULL, 16);
-  instr &= (offset_value << SHL_OFF);  // offset 
-  unsigned imm_value = strtoul(op3.substr(1).c_str(), NULL, 16);
-  instr &= (imm_value << SHL_IMM);  // imm  
+  instr |= ((op1[2] - '0') << SHL_DST);  // dst reg
+  uint64_t offset_value = strtoul(op2.substr(1).c_str(), NULL, 16);
+  instr |= (offset_value << SHL_OFF);  // offset 
+  uint64_t imm_value = strtoul(op3.substr(1).c_str(), NULL, 16);
+  instr |= (imm_value << SHL_IMM);  // imm  
   
   return instr;
 }
@@ -264,28 +274,30 @@ uint64_t parseStImm(std::string op, std::string op1, std::string op2, std::strin
 uint64_t parseStSrc(std::string op, std::string op1, std::string op2, std::string op3)
 {
   uint64_t instr = 0x0;
-  instr &=
+  instr |=
           (op == "stxw") ? BPF_STXW
           : (op == "stxdw") ? BPF_STXDW
           : (op == "stxb") ? BPF_STXB
           : BPF_STXH;
   
-  instr &= ((op1[1] - '0') << SHL_DST);  // dst reg
-  unsigned offset_value = strtoul(op2.substr(1).c_str(), NULL, 16);
-  instr &= (offset_value << SHL_OFF);  // offset 
-  instr &= ((op3[1] - '0') << SHL_SRC);  // src reg
+  instr |= ((op1[2] - '0') << SHL_DST);  // dst reg
+  uint64_t offset_value = strtoul(op2.substr(1).c_str(), NULL, 16);
+  instr |= (offset_value << SHL_OFF);  // offset 
+  instr |= ((op3[1] - '0') << SHL_SRC);  // src reg
   
   return instr;
 }
 
 // Parses source file and assembles all instructions into 
 // bytecode.
+// Note: Leave spaces around punctuation: ',' '+'
+// TODO: Make this robust enough to handle code not conforming with above
 std::vector<uint64_t> assemble()
 {
   std::vector<uint64_t> prog;
   
   std::ifstream instream(filename);
-  if (instream == nullptr)
+  if (!instream)
   {
     std::cout << "Could not find BPF source file." << std::endl;
   }
@@ -297,13 +309,19 @@ std::vector<uint64_t> assemble()
   // 4. Repeat
   while (!instream.eof())
   {
+    curr_line++; // keep track of current line via global
+    
     uint64_t instr = 0x0;
+    
+    // Parse opcode (mnemonic)
     std::string op;
-    std::string op1;
-    std::string op2;
     instream >> op;
     
-    // Switch on instruction
+    // Operands
+    std::string op1;
+    std::string op2;
+    
+    // Parse different instruction formats
     if (op == "add" || op == "sub" || op == "mul" || op == "div" 
      || op == "or" || op == "and" || op == "lsh" || op == "rsh"
      || op == "mod" || op == "xor" || op == "mov" || op == "arsh")
@@ -315,8 +333,8 @@ std::vector<uint64_t> assemble()
     else if (op == "neg")
     {
       instream >> op1;
-      instr &= BPF_NEG;
-      instr &= ((op1[1] - '0') << SHL_DST);
+      instr |= BPF_NEG;
+      instr |= ((op1[1] - '0') << SHL_DST);
     }
     else if (op == "add32" || op == "sub32" || op == "mul32" || op == "div32"
             || op == "or32" || op == "and32" || op == "lsh32" || op == "rsh32"
@@ -329,33 +347,34 @@ std::vector<uint64_t> assemble()
     else if (op == "neg32")
     {
       instream >> op1;
-      instr &= BPF_NEG32;
-      instr &= ((op1[1] - '0') << SHL_DST);
+      instr |= BPF_NEG32;
+      instr |= ((op1[1] - '0') << SHL_DST);
     }
     else if (op == "le16" || op == "le32" || op == "le64")
     {
       instream >> op1;
-      instr &= BPF_LE;
-      instr &= ((op1[1] - '0') << SHL_DST);
+      instr |= BPF_LE;
+      instr |= ((op1[1] - '0') << SHL_DST);
     }
     else if (op == "be16" || op == "be32" || op == "be64")
     {
       instream >> op1;
-      instr &= BPF_BE;
-      instr &= ((op1[1] - '0') << SHL_DST);
+      instr |= BPF_BE;
+      instr |= ((op1[1] - '0') << SHL_DST);
     }
     else if (op == "ja")
     {
       instream >> op1;
-      instr &= BPF_BE;
-      unsigned lbl_line = seekLabel(op1, filename);
-      instr &= (lbl_line << SHL_OFF);
+      instr |= BPF_JA;
+      uint64_t lbl_line = seekLabel(op1);
+      instr |= (lbl_line << SHL_OFF);
     }
     else if (op == "jeq" || op == "jgt" || op == "jge" || op == "jset"
             || op == "jne" || op == "jsgt" || op == "jsge")
     {
       instream >> op1;
       instream >> op2;
+      op2.pop_back(); // erase ','
       // we need an extra operand for the label
       std::string op3;
       instream >> op3;
@@ -364,13 +383,13 @@ std::vector<uint64_t> assemble()
     else if (op == "call")
     {
       instream >> op1;
-      instr &= BPF_CALL_IMM;
-      unsigned imm_value = strtoul(op1.substr(1).c_str(), NULL, 16);
-      instr &= (imm_value << SHL_IMM);
+      instr |= BPF_CALL_IMM;
+      uint64_t imm_value = strtoul(op1.substr(1).c_str(), NULL, 16);
+      instr |= (imm_value << SHL_IMM);
     }
     else if (op == "exit")
     {
-      instr &= BPF_EXIT;
+      instr |= BPF_EXIT;
     }
     // label case 
     else if (op.back() == ':')
@@ -381,10 +400,12 @@ std::vector<uint64_t> assemble()
     }
     else if (op == "lddw")
     {
+      instr |= BPF_LDDW;
       instream >> op1;
-      instr &= BPF_LDDW;
-      unsigned imm_value = strtoul(op1.substr(1).c_str(), NULL, 16);
-      instr &= (imm_value << SHL_IMM);
+      instr |= ((op1[1] - '0') << SHL_DST);
+      instream >> op2;
+      uint64_t imm_value = strtoul(op2.substr(1).c_str(), NULL, 16);
+      instr |= (imm_value << SHL_IMM);
     }
     else if (op == "ldabsw" || op == "ldabsh" || op == "ldabsb" || op == "ldabsdw"
             || op == "ldindw" || op == "ldindh" || op == "ldindb" || op == "ldinddw")
@@ -398,15 +419,19 @@ std::vector<uint64_t> assemble()
     else if (op == "ldxw" || op == "ldxh" || op == "ldxb" || op == "ldxdw")
     {
       instream >> op1;
-      instream >> op2; // ignore [
+      instream >> op2; // [RX
       std::string op3;
-      instream >> op3; // ignore + and ]
+      instream >> op3; // +
+      instream >> op3; // #offset]
+      op3.pop_back(); // erase ']'
       instr = parseLdx(op, op1, op2, op3);
     }
     else if (op == "stw" || op == "sth" || op == "stb" || op == "stdw")
     {
       instream >> op1;
+      instream >> op2; // +
       instream >> op2;
+      op2.pop_back(); // erase ']'
       std::string op3;
       instream >> op3;
       instr = parseStImm(op, op1, op2, op3);
@@ -414,19 +439,29 @@ std::vector<uint64_t> assemble()
     else if (op == "stxw" || op == "stxh" || op =="stxb" || op == "stxdw")
     {
       instream >> op1;
+      instream >> op2; // +
       instream >> op2;
+      op2.pop_back(); // erase ']'
+      op2.pop_back(); // erase ','
       std::string op3;
       instream >> op3;
       instr = parseStSrc(op, op1, op2, op3);
+    }
+    else if (op == ";;")
+    {
+      // Skip comments
+      std::string line;
+      std::getline(instream, line);
+      continue;
     }
     else
     {
       std::cout << "Bad instruction: " << op 
               << ". Exiting parse routine..." << std::endl;
-      return;
+      break;
     }
     
-    
+    // Add the generated instruction to the program
     prog.push_back(instr);
   }
   
@@ -438,7 +473,7 @@ int main(int argc, char** argv)
 {
   //std::unique_ptr<VM> vm = std::make_unique<VM>();
   
-  filename("bpf_source.bpf");
+  filename = "bpf_source.bpf";
   std::vector<uint64_t> prog = assemble();
   
   // feed assembled bytecode to the VM
