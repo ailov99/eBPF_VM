@@ -1,13 +1,16 @@
-#include <cstdio>
 #include "VM.h"
+#include "Opcodes.h"
+#include <cstdio>
 
 
+// Default constructor
 VM::VM()
 : pc(0), running(false)
 {
  
 }
 
+// Registers struct default constructor
 VM::Registers::Registers()
 : R0(0),R1(0),R2(0),R3(0),R4(0),R5(0),R6(0),
         R7(0),R8(0),R9(0),R10(0)
@@ -15,32 +18,28 @@ VM::Registers::Registers()
   
 }
 
-void VM::Decode(const uint16_t instr)
+// Decode an instruction
+// sets up the internal VM state with data
+// to be used during the following Eval stage
+void VM::Decode(const uint64_t instr)
 {
-  R0().Write64((instr & 0xf000) >> 12);
-  R1().Write64((instr & 0xf00) >> 8);
-  R2().Write64((instr & 0xf0) >> 4);
-  R3().Write64((instr & 0xf));
-  R4().Write64((instr & 0xff));
+  _opcode = (instr & OP_MASK);
+  _dst    = (instr & DST_MASK) >> SHL_DST;
+  _src    = (instr & SRC_MASK) >> SHL_SRC;
+  _offset = (instr & OFF_MASK) >> SHL_OFF;
+  _imm    = (instr & IMM_MASK) >> SHL_IMM;
 }
 
+// Evaluate instruction using the set state
 void VM::Eval()
 {
-  switch(R0().Read64())
-  {
-    case 0x0:
-      printf("HALT\n");;
-      running = false;
-      break;
-    case 0x1:
-      printf("ONE\n");
-      break;
-    default:
-      break;
-  }
+  
 }
 
-Register& VM::GetRegister(const int num)
+// Register getter using an index argument.
+// This is useful since we rely on the register
+// numbering set into _dst and _src
+Register& VM::GetRegister(const unsigned num)
 {
   switch(num)
   {
@@ -64,6 +63,7 @@ bool VM::IsRunning() const
   return running;
 }
 
+// Display all register state
 void VM::DisplayRegs() const
 {
   printf("R0: %016X\n", Regs.R0.Read64());
@@ -79,7 +79,9 @@ void VM::DisplayRegs() const
   printf("R10: %016X\n", Regs.R10.Read64());
 }
 
-void VM::Run(const std::vector<uint16_t>& program)
+// "main" run routine for the VM
+// Kicks off the Fetch->Decode->Eval
+void VM::Run(const std::vector<uint64_t>& program)
 {
   running = true;
   

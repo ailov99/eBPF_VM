@@ -9,8 +9,15 @@
 class VM
 {
 private:
+  /* --------------- State -----------------*/
   uint64_t pc; // program counter
   bool running; // running/halt flag
+  
+  uint8_t _opcode;  // instruction opcode
+  uint8_t _dst;     // destination
+  uint8_t _src;     // source
+  uint16_t _offset; // offset
+  uint32_t _imm;    // immediate
   
   struct Registers
   {
@@ -38,17 +45,17 @@ private:
     Register R10;
   } Regs;
   
-  void Decode(const uint16_t);
+  void Decode(const uint64_t);
   void Eval();
   
 public:
   VM();
-  void Run(const std::vector<uint16_t>&);
+  void Run(const std::vector<uint64_t>&);
   bool IsRunning() const;
   void DisplayRegs() const;
   
   uint64_t GetPc() const {return pc;};
-  Register& GetRegister(const int);
+  Register& GetRegister(const unsigned);
   Register& R0() {return Regs.R0;};
   Register& R1() {return Regs.R1;};
   Register& R2() {return Regs.R2;};

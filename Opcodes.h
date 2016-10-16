@@ -1,5 +1,18 @@
 #pragma once
 
+// Shift values
+#define SHL_DST 8UL
+#define SHL_SRC 12UL
+#define SHL_OFF 16UL
+#define SHL_IMM 32UL
+
+// Masks
+#define DST_MASK 0xF00
+#define SRC_MASK 0xF000
+#define OP_MASK  0xFF
+#define OFF_MASK (0xFFFF << SHL_OFF)
+#define IMM_MASK (0xFFFFFFFF << SHL_IMM)
+
 /* --------------------- ALU 64-bit -------------------------- */
 #define BPF_ADD_IMM  0x07
 #define BPF_ADD_SRC  0x0f

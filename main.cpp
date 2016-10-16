@@ -13,12 +13,6 @@
 #include "VM.h"
 #include "Opcodes.h"
 
-// Shift values
-#define SHL_DST 8UL
-#define SHL_SRC 12UL
-#define SHL_OFF 16UL
-#define SHL_IMM 32UL
-
 // Useful globals
 std::string filename;
 uint16_t curr_line;
