@@ -7,11 +7,11 @@
 #define SHL_IMM 32UL
 
 // Masks
+#define OP_MASK  0xFF
 #define DST_MASK 0xF00
 #define SRC_MASK 0xF000
-#define OP_MASK  0xFF
-#define OFF_MASK (0xFFFF << SHL_OFF)
-#define IMM_MASK (0xFFFFFFFF << SHL_IMM)
+#define OFF_MASK 0xFFFF0000
+#define IMM_MASK 0xFFFFFFFF00000000
 
 /* --------------------- ALU 64-bit -------------------------- */
 #define BPF_ADD_IMM  0x07

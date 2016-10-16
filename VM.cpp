@@ -5,7 +5,8 @@
 
 // Default constructor
 VM::VM()
-: pc(0), running(false)
+: pc(0), running(false), _opcode(0), _dst(0),
+        _src(0), _offset(0), _imm(0)
 {
  
 }
@@ -33,13 +34,167 @@ void VM::Decode(const uint64_t instr)
 // Evaluate instruction using the set state
 void VM::Eval()
 {
-  
+  switch(_opcode)
+  {
+    case BPF_ADD_IMM:
+    {
+      uint64_t res = GetReg(_dst).Read64() + _imm;
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_ADD_SRC:
+    {
+      uint64_t res = GetReg(_dst).Read64() + GetReg(_src).Read64();
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_SUB_IMM:
+    {
+      uint64_t res = GetReg(_dst).Read64() - _imm;
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_SUB_SRC:
+    {
+      uint64_t res = GetReg(_dst).Read64() - GetReg(_src).Read64();
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_MUL_IMM:
+    {
+      uint64_t res = GetReg(_dst).Read64() * _imm;
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_MUL_SRC:
+    {
+      uint64_t res = GetReg(_dst).Read64() * GetReg(_src).Read64();
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_DIV_IMM:
+    {
+      uint64_t res = GetReg(_dst).Read64() / _imm;
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_DIV_SRC:
+    {
+      uint64_t res = GetReg(_dst).Read64() / GetReg(_src).Read64();
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_OR_IMM:
+    {
+      uint64_t res = GetReg(_dst).Read64() | _imm;
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_OR_SRC:
+    {
+      uint64_t res = GetReg(_dst).Read64() | GetReg(_src).Read64();
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_AND_IMM:
+    {
+      uint64_t res = GetReg(_dst).Read64() & _imm;
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_AND_SRC:
+    {
+      uint64_t res = GetReg(_dst).Read64() & GetReg(_src).Read64();
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_LSH_IMM:
+    {
+      uint64_t res = GetReg(_dst).Read64() << _imm;
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_LSH_SRC:
+    {
+      uint64_t res = GetReg(_dst).Read64() << GetReg(_src).Read64();
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_RSH_IMM:
+    {
+      uint64_t res = GetReg(_dst).Read64() >> _imm;
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_RSH_SRC:
+    {
+      uint64_t res = GetReg(_dst).Read64() >> GetReg(_src).Read64();
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_NEG:
+    {
+     uint64_t res = ~(GetReg(_dst).Read64());
+     GetReg(_dst).Write64(res);
+     break;
+    }
+    case BPF_MOD_IMM:
+    {
+      uint64_t res = GetReg(_dst).Read64() % _imm;
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_MOD_SRC:
+    {
+      uint64_t res = GetReg(_dst).Read64() % GetReg(_src).Read64();
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_XOR_IMM:
+    {
+      uint64_t res = GetReg(_dst).Read64() ^ _imm;
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_XOR_SRC:
+    {
+      uint64_t res = GetReg(_dst).Read64() ^ GetReg(_src).Read64();
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_MOV_IMM:
+    {
+      GetReg(_dst).Write64(_imm);
+      break;
+    }
+    case BPF_MOV_SRC:
+    {
+      GetReg(_dst).Write64(GetReg(_src).Read64());
+      break;
+    }
+    case BPF_ARSH_IMM:
+    {
+      uint64_t res = ((int64_t)GetReg(_dst).Read64()) >> _imm;
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    case BPF_ARSH_SRC:
+    {
+      uint64_t res = ((int64_t)GetReg(_dst).Read64()) >> GetReg(_src).Read64();
+      GetReg(_dst).Write64(res);
+      break;
+    }
+    default:
+    {
+      
+    }
+  }
 }
 
 // Register getter using an index argument.
 // This is useful since we rely on the register
 // numbering set into _dst and _src
-Register& VM::GetRegister(const unsigned num)
+Register& VM::GetReg(const unsigned num)
 {
   switch(num)
   {

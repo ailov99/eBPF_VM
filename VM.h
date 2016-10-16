@@ -55,7 +55,7 @@ public:
   void DisplayRegs() const;
   
   uint64_t GetPc() const {return pc;};
-  Register& GetRegister(const unsigned);
+  Register& GetReg(const unsigned);
   Register& R0() {return Regs.R0;};
   Register& R1() {return Regs.R1;};
   Register& R2() {return Regs.R2;};
