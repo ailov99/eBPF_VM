@@ -184,6 +184,154 @@ void VM::Eval()
       GetReg(_dst).Write64(res);
       break;
     }
+    case BPF_ADD32_IMM:
+    {
+      uint32_t res = GetReg(_dst).Read32() + _imm;
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_ADD32_SRC:
+    {
+      uint32_t res = GetReg(_dst).Read32() + GetReg(_src).Read32();
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_SUB32_IMM:
+    {
+      uint32_t res = GetReg(_dst).Read32() - _imm;
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_SUB32_SRC:
+    {
+      uint32_t res = GetReg(_dst).Read32() - GetReg(_src).Read32();
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_MUL32_IMM:
+    {
+      uint32_t res = GetReg(_dst).Read32() * _imm;
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_MUL32_SRC:
+    {
+      uint32_t res = GetReg(_dst).Read32() * GetReg(_src).Read32();
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_DIV32_IMM:
+    {
+      uint32_t res = GetReg(_dst).Read32() / _imm;
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_DIV32_SRC:
+    {
+      uint32_t res = GetReg(_dst).Read32() / GetReg(_src).Read32();
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_OR32_IMM:
+    {
+      uint32_t res = GetReg(_dst).Read32() | _imm;
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_OR32_SRC:
+    {
+      uint32_t res = GetReg(_dst).Read32() | GetReg(_src).Read32();
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_AND32_IMM:
+    {
+      uint32_t res = GetReg(_dst).Read32() & _imm;
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_AND32_SRC:
+    {
+      uint32_t res = GetReg(_dst).Read32() & GetReg(_src).Read32();
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_LSH32_IMM:
+    {
+      uint32_t res = GetReg(_dst).Read32() << _imm;
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_LSH32_SRC:
+    {
+      uint32_t res = GetReg(_dst).Read32() << GetReg(_src).Read32();
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_RSH32_IMM:
+    {
+      uint32_t res = GetReg(_dst).Read32() >> _imm;
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_RSH32_SRC:
+    {
+      uint32_t res = GetReg(_dst).Read32() >> GetReg(_src).Read32();
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_NEG32:
+    {
+      uint32_t res = ~(GetReg(_dst).Read32());
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_MOD32_IMM:
+    {
+      uint32_t res = GetReg(_dst).Read32() % _imm;
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_MOD32_SRC:
+    {
+      uint32_t res = GetReg(_dst).Read32() % GetReg(_src).Read32();
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_XOR32_IMM:
+    {
+      uint32_t res = GetReg(_dst).Read32() ^ _imm;
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_XOR32_SRC:
+    {
+      uint32_t res = GetReg(_dst).Read32() ^ GetReg(_src).Read32();
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_MOV32_IMM:
+    {
+      GetReg(_dst).Write32(_imm);
+      break;
+    }
+    case BPF_MOV32_SRC:
+    {
+      GetReg(_dst).Write32(GetReg(_src).Read32());
+      break;
+    }
+    case BPF_ARSH32_IMM:
+    {
+      uint32_t res = ((int32_t)GetReg(_dst).Read32()) >> _imm;
+      GetReg(_dst).Write32(res);
+      break;
+    }
+    case BPF_ARSH32_SRC:
+    {
+      uint32_t res = ((int32_t)GetReg(_dst).Read32()) >> GetReg(_src).Read32();
+      GetReg(_dst).Write32(res);
+      break;
+    }
     default:
     {
       
