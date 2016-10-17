@@ -344,17 +344,47 @@ std::vector<uint64_t> assemble()
       instr |= BPF_NEG32;
       instr |= ((op1[1] - '0') << SHL_DST);
     }
-    else if (op == "le16" || op == "le32" || op == "le64")
+    else if (op == "le16")
     {
       instream >> op1;
       instr |= BPF_LE;
       instr |= ((op1[1] - '0') << SHL_DST);
+      instr |= (0x10UL << SHL_IMM);  // imm 
     }
-    else if (op == "be16" || op == "be32" || op == "be64")
+    else if (op == "le32")
+    {
+      instream >> op1;
+      instr |= BPF_LE;
+      instr |= ((op1[1] - '0') << SHL_DST);
+      instr |= (0x20UL << SHL_IMM);  // imm 
+    }
+    else if (op == "le64")
+    {
+      instream >> op1;
+      instr |= BPF_LE;
+      instr |= ((op1[1] - '0') << SHL_DST);
+      instr |= (0x40UL << SHL_IMM);  // imm 
+    }
+    else if (op == "be16")
     {
       instream >> op1;
       instr |= BPF_BE;
       instr |= ((op1[1] - '0') << SHL_DST);
+      instr |= (0x10UL << SHL_IMM);  // imm 
+    }
+    else if (op == "be32")
+    {
+      instream >> op1;
+      instr |= BPF_BE;
+      instr |= ((op1[1] - '0') << SHL_DST);
+      instr |= (0x20UL << SHL_IMM);  // imm 
+    }
+    else if(op == "be64")
+    {
+      instream >> op1;
+      instr |= BPF_BE;
+      instr |= ((op1[1] - '0') << SHL_DST);
+      instr |= (0x40UL << SHL_IMM);  // imm 
     }
     else if (op == "ja")
     {

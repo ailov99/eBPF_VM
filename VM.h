@@ -46,13 +46,15 @@ private:
   } Regs;
   
   void Decode(const uint64_t);
-  void Eval();
+  uint64_t Eval();
   
 public:
   VM();
-  void Run(const std::vector<uint64_t>&);
+  uint64_t Run(const std::vector<uint64_t>&);
   bool IsRunning() const;
   void DisplayRegs() const;
+  void DisplayState() const;
+  void DisplayAll() const;
   
   uint64_t GetPc() const {return pc;};
   Register& GetReg(const unsigned);

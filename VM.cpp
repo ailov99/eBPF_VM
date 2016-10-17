@@ -1,6 +1,7 @@
 #include "VM.h"
 #include "Opcodes.h"
 #include <cstdio>
+#include <arpa/inet.h>
 
 
 // Default constructor
@@ -32,7 +33,10 @@ void VM::Decode(const uint64_t instr)
 }
 
 // Evaluate instruction using the set state
-void VM::Eval()
+// A return value of 0 signifies no 
+// program return -> carry on with next instruction
+// Otherwise, we assume caller has loaded a return value in R0
+uint64_t VM::Eval()
 {
   switch(_opcode)
   {
@@ -332,11 +336,201 @@ void VM::Eval()
       GetReg(_dst).Write32(res);
       break;
     }
+    case BPF_LE:
+    {
+      switch (_imm)
+      {
+        case 16:
+        {
+          uint16_t lsHw = (GetReg(_dst).Read64() & 0xffff);
+          lsHw = ntohs(lsHw);
+          uint32_t res = lsHw;
+          GetReg(_dst).Write32(res);
+          break;
+        }
+        case 32:
+        {
+          uint32_t res = GetReg(_dst).Read32();
+          res = ntohl(res);
+          GetReg(_dst).Write32(res);
+          break;
+        }
+        case 64:
+        default:
+        {
+          uint64_t res = ntohl(GetReg(_dst).ReadMS32());
+          res = (res << 32) | ntohl(GetReg(_dst).Read32());
+          GetReg(_dst).Write64(res);
+          break;
+        }
+      }
+      break;
+    }
+    case BPF_BE:
+    {
+        switch (_imm)
+      {
+        case 16:
+        {
+          uint16_t lsHw = (GetReg(_dst).Read64() & 0xffff);
+          lsHw = htons(lsHw);
+          uint32_t res = lsHw;
+          GetReg(_dst).Write32(res);
+          break;
+        }
+        case 32:
+        {
+          uint32_t res = GetReg(_dst).Read32();
+          res = htonl(res);
+          GetReg(_dst).Write32(res);
+          break;
+        }
+        case 64:
+        default:
+        {
+          uint64_t res = htonl(GetReg(_dst).ReadMS32());
+          res = (res << 32) | htonl(GetReg(_dst).Read32());
+          GetReg(_dst).Write64(res);
+          break;
+        }
+      }
+      break;
+    }
+    case BPF_JA:
+    {
+      pc += _offset;
+      break;
+    }
+    case BPF_JEQ_IMM:
+    {
+      if (GetReg(_dst).Read64() == _imm)
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JEQ_SRC:
+    {
+      if (GetReg(_dst).Read64() == GetReg(_src).Read64())
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JGT_IMM:
+    {
+      if (GetReg(_dst).Read64() > _imm)
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JGT_SRC:
+    {
+      if (GetReg(_dst).Read64() > GetReg(_src).Read64())
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JGE_IMM:
+    {
+      if (GetReg(_dst).Read64() >= _imm)
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JGE_SRC:
+    {
+      if (GetReg(_dst).Read64() >= GetReg(_src).Read64())
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JSET_IMM:
+    {
+      if (GetReg(_dst).Read64() & _imm)
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JSET_SRC:
+    {
+      if (GetReg(_dst).Read64() & GetReg(_src).Read64())
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JNE_IMM:
+    {
+      if (GetReg(_dst).Read64() != _imm)
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JNE_SRC:
+    {
+      if (GetReg(_dst).Read64() != GetReg(_src).Read64())
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JSGT_IMM:
+    {
+      if ((int64_t)GetReg(_dst).Read64() > _imm)
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JSGT_SRC:
+    {
+      if ((int64_t)GetReg(_dst).Read64() > (int64_t)GetReg(_src).Read64())
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JSGE_IMM:
+    {
+      if ((int64_t)GetReg(_dst).Read64() >= _imm)
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_JSGE_SRC:
+    {
+      if ((int64_t)GetReg(_dst).Read64() >= (int64_t)GetReg(_src).Read64())
+      {
+        pc += _offset;
+      }
+      break;
+    }
+    case BPF_CALL_IMM:
+    {
+      pc = _imm;
+      break;
+    }
+    case BPF_EXIT:
+    {
+      // caller loaded R0
+      return R0().Read64();
+    }
     default:
     {
-      
+      printf("Could not evaluate instruction: %016X\n", _opcode);
+      return 0;
     }
   }
+  
+  return 0;
 }
 
 // Register getter using an index argument.
@@ -382,9 +576,28 @@ void VM::DisplayRegs() const
   printf("R10: %016X\n", Regs.R10.Read64());
 }
 
+// Display VM state variables
+void VM::DisplayState() const
+{
+  printf("pc : %016X\n", pc);
+  printf("run: %c\n", running ? 'T' : 'F');
+  printf("op : %016X\n", _opcode);
+  printf("dst: %016X\n", _dst);
+  printf("src: %016X\n", _src);
+  printf("off: %016X\n", _offset);
+  printf("imm: %016X\n", _imm);
+}
+
+// Display all info (VM state + all regs)
+void VM::DisplayAll() const
+{
+  DisplayState();
+  DisplayRegs();
+}
+
 // "main" run routine for the VM
 // Kicks off the Fetch->Decode->Eval
-void VM::Run(const std::vector<uint64_t>& program)
+uint64_t VM::Run(const std::vector<uint64_t>& program)
 {
   running = true;
   
@@ -400,6 +613,13 @@ void VM::Run(const std::vector<uint64_t>& program)
     Decode(instr);
     
     // evaluate
-    Eval();
+    if (Eval() != 0)
+    {
+      // program returned -> ret value is in R0
+      running = false;
+    }
   }
+  
+  // pass ret value
+  return R0().Read64();
 }
