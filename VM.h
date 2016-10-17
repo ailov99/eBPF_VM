@@ -5,12 +5,13 @@
 #include "Registers.h"
 
 #define NUM_REGS 10
+#define NUM_MEMSLOTS 16
 
 class VM
 {
 private:
   /* --------------- State -----------------*/
-  uint64_t pc; // program counter
+  uint64_t pc;  // program counter
   bool running; // running/halt flag
   
   uint8_t _opcode;  // instruction opcode
@@ -18,6 +19,8 @@ private:
   uint8_t _src;     // source
   uint16_t _offset; // offset
   uint32_t _imm;    // immediate
+  
+  uint64_t _mem[NUM_MEMSLOTS];   // scratch memory
   
   struct Registers
   {

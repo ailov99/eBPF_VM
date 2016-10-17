@@ -522,11 +522,126 @@ uint64_t VM::Eval()
     {
       // caller loaded R0
       return R0().Read64();
+      break;
+    }
+    case BPF_LDDW:
+    {
+      GetReg(_dst).Write64(_imm);
+      break;
+    }
+    case BPF_LDXW:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _src + _offset;
+      uint32_t offWord = *((uint32_t*)pByte);
+      GetReg(_dst).Write32(offWord);
+      break;
+    }
+    case BPF_LDXH:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _src + _offset;
+      uint32_t offWord = *((uint16_t*)pByte);
+      GetReg(_dst).Write32(offWord);
+      break;
+    }
+    case BPF_LDXB:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _src + _offset;
+      uint32_t offWord = *((uint8_t*)pByte);
+      GetReg(_dst).Write32(offWord);
+      break;
+    }
+    case BPF_LDXDW:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _src + _offset;
+      uint64_t offWord = *((uint64_t*)pByte);
+      GetReg(_dst).Write64(offWord);
+      break;
+    }
+    case BPF_STW:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _dst + _offset;
+      uint32_t stWord = _imm & 0xffffffff;
+      *pByte = stWord;
+      break;
+    }
+    case BPF_STH:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _dst + _offset;
+      uint16_t stHword = _imm & 0xffff;
+      *pByte = stHword;
+      break;
+    }
+    case BPF_STB:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _dst + _offset;
+      uint8_t stByte = _imm & 0xff;
+      *pByte = stByte;
+      break;
+    }
+    case BPF_STDW:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _dst + _offset;
+      uint64_t stDword = _imm;
+      *pByte = stDword;
+      break;
+    }
+    case BPF_STXW:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _dst + _offset;
+      uint32_t stWord = GetReg(_src).Read32();
+      *pByte = stWord;
+      break;
+    }
+    case BPF_STXH:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _dst + _offset;
+      uint16_t stHword = GetReg(_src).Read32() & 0xffff;
+      *pByte = stHword;
+      break;
+    }
+    case BPF_STXB:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _dst + _offset;
+      uint8_t stByte = GetReg(_src).Read32() & 0xff;
+      *pByte = stByte;
+      break;
+    }
+    case BPF_STXDW:
+    {
+      unsigned char *pByte = reinterpret_cast<unsigned char*>(_mem);
+      pByte += _dst + _offset;
+      uint64_t stDword = GetReg(_src).Read64();
+      *pByte = stDword;
+      break;
+    }
+    case BPF_LDABSW:
+    case BPF_LDABSH:
+    case BPF_LDABSB:
+    case BPF_LDABSDW:
+    case BPF_LDINDW:
+    case BPF_LDINDH:
+    case BPF_LDINDB:
+    case BPF_LDINDDW:
+    {
+      printf("Unsupported instruction: LDIND | LDABS\n");
+      break;
     }
     default:
     {
       printf("Could not evaluate instruction: %016X\n", _opcode);
       return 0;
+      break;
     }
   }
   
