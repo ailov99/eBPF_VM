@@ -22,7 +22,7 @@ uint32_t Register::Read32() const
 
 uint32_t Register::ReadMS32() const
 {
-  uint32_t ms = (data & (0xf0 << 28)) >> 32;
+  uint32_t ms = (data & (0xf << 28)) >> 32;
   
   return ms;
 }
@@ -39,5 +39,6 @@ void Register::Write32(uint32_t newVal)
 
 void Register::WriteMS32(uint32_t newVal)
 {
-  data = (newVal << 32) & (0xf0 << 28);
+  data = newVal;
+  data <<= 32;
 }

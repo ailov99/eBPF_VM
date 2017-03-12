@@ -1,3 +1,9 @@
-loadx R0 #100
-loadi #123
-ret 0
+lddw r2, #0x4
+lddw r3, #0x6
+add r1, r2
+sub r1, #0x3
+mul r1, r2
+div r1, #0x2
+
+
+exit

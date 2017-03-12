@@ -35,6 +35,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
+	${OBJECTDIR}/Assembler.o \
 	${OBJECTDIR}/Register.o \
 	${OBJECTDIR}/VM.o \
 	${OBJECTDIR}/main.o
@@ -63,6 +64,11 @@ LDLIBSOPTIONS=
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ebpf_vm: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/ebpf_vm ${OBJECTFILES} ${LDLIBSOPTIONS}
+
+${OBJECTDIR}/Assembler.o: Assembler.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/Assembler.o Assembler.cpp
 
 ${OBJECTDIR}/Register.o: Register.cpp 
 	${MKDIR} -p ${OBJECTDIR}

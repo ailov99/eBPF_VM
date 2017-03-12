@@ -4,6 +4,7 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
+      <itemPath>Assembler.h</itemPath>
       <itemPath>Opcodes.h</itemPath>
       <itemPath>Registers.h</itemPath>
       <itemPath>VM.h</itemPath>
@@ -15,6 +16,7 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
+      <itemPath>Assembler.cpp</itemPath>
       <itemPath>Register.cpp</itemPath>
       <itemPath>VM.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
@@ -43,8 +45,13 @@
         <ccTool>
           <standard>11</standard>
           <commandlineTool>g++</commandlineTool>
+          <commandLine>-fPIC</commandLine>
         </ccTool>
       </compileType>
+      <item path="Assembler.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Assembler.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="Opcodes.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="Register.cpp" ex="false" tool="1" flavor2="0">
@@ -79,6 +86,10 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
+      <item path="Assembler.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="Assembler.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="Opcodes.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="Register.cpp" ex="false" tool="1" flavor2="0">

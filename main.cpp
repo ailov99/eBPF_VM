@@ -496,10 +496,11 @@ std::vector<uint64_t> assemble()
 int main(int argc, char** argv) 
 {
   //std::unique_ptr<VM> vm = std::make_unique<VM>();
-  
+  VM vm = VM();
   filename = "bpf_source.bpf";
   std::vector<uint64_t> prog = assemble();
   
+  vm.Run(prog);
   // feed assembled bytecode to the VM
   //std::vector<uint16_t> program;
   //program.push_back(0x1064);

@@ -722,7 +722,7 @@ uint64_t VM::Run(const std::vector<uint64_t>& program)
     DisplayRegs();
     
     // fetch next instruction
-    uint16_t instr = program[pc++];
+    uint64_t instr = program[pc++];
     
     // decode fetched instruction
     Decode(instr);
